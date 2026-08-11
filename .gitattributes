@@ -1,0 +1,7 @@
+# Files exec'd inside Linux containers must keep LF endings even when the
+# repo is checked out on Windows (git's autocrlf would otherwise turn the
+# shebang into "#!/usr/bin/env bash\r", which the kernel rejects).
+*.sh text eol=lf
+odoo-bin text eol=lf
+deploy/Caddyfile text eol=lf
+Dockerfile text eol=lf

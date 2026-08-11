@@ -92,7 +92,13 @@ RUN pip install --no-index --find-links=/wheels -r /tmp/requirements.txt \
 RUN groupadd -r odoo && useradd -r -g odoo -d /var/lib/odoo -s /sbin/nologin odoo
 
 COPY . /opt/odoo
-RUN mkdir -p /etc/odoo /var/lib/odoo \
+# A Windows checkout arrives with CRLF line endings (git's autocrlf default,
+# and this repo carried no .gitattributes until it bit). The kernel takes the
+# shebang line literally, so exec'ing these two scripts then fails with
+# "env: 'bash\r': No such file or directory" and the container dies at start.
+# Python and XML don't care, so only the exec'd scripts need scrubbing.
+RUN sed -i 's/\r$//' /opt/odoo/deploy/entrypoint.sh /opt/odoo/odoo-bin \
+    && mkdir -p /etc/odoo /var/lib/odoo \
     && chown -R odoo:odoo /var/lib/odoo /etc/odoo \
     && chmod +x /opt/odoo/odoo-bin /opt/odoo/deploy/entrypoint.sh \
     && ln -s /opt/odoo/odoo-bin /usr/local/bin/odoo
