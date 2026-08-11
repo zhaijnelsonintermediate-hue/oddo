@@ -1,0 +1,53 @@
+# Local development stack — mirrors the Railway deployment.
+#
+#   docker compose up --build
+#   open http://localhost:8069   (admin / admin123)
+#
+# The source tree is bind-mounted over the image copy, so edits to
+# custom-addons/ (and to Odoo itself) are visible without rebuilding. Python
+# changes still need a container restart; XML/CSV data changes need a module
+# upgrade, which ODOO_UPDATE_MODULES does on the next boot.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+      POSTGRES_DB: odoo
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  odoo:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://odoo:odoo@db:5432/odoo
+      PORT: "8069"
+      ODOO_ADMIN_PASSWORD: admin123
+      ODOO_MASTER_PASSWORD: local-dev-master
+      ODOO_INIT_MODULES: crm
+      ODOO_LOAD_LANGUAGE: zh_CN
+      ODOO_LOG_LEVEL: info
+      # Demo data makes an empty CRM pipeline much easier to explore.
+      ODOO_WITH_DEMO: "1"
+      # Uncomment to reload a module's XML/CSV data on the next start:
+      # ODOO_UPDATE_MODULES: my_crm_ext
+    ports:
+      - "8069:8069"
+    volumes:
+      - odoo-data:/var/lib/odoo
+      - ./custom-addons:/opt/odoo/custom-addons
+      - ./addons:/opt/odoo/addons
+      - ./odoo:/opt/odoo/odoo
+
+volumes:
+  db-data:
+  odoo-data:

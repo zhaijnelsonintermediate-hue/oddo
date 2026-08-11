@@ -1,0 +1,10 @@
+.git
+.github
+doc
+debian
+*.pyc
+__pycache__
+.pytest_cache
+*.egg-info
+.venv
+venv
