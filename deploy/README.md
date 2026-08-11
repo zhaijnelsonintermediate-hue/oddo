@@ -109,6 +109,52 @@ http 链接的问题。
 docker compose up --build
 ```
 
+### 从零开始（Windows）
+
+**1. 装 Docker Desktop。** 从 <https://www.docker.com/products/docker-desktop/>
+下载安装，按提示重启。装完启动它，等托盘的鲸鱼图标不再转动。验证：
+
+```powershell
+docker --version
+docker compose version
+```
+
+两条都有版本号输出才算好了。报 `docker: command not found` 或
+`Cannot connect to the Docker daemon` 就是 Docker Desktop 没启动。
+
+**2. 拿代码。** 完整历史有 1 GB 以上，用浅克隆快很多：
+
+```powershell
+git clone --depth 1 -b claude/odoo-open-source-system-da1r23 https://github.com/zhaijnelsonintermediate-hue/oddo.git
+cd oddo
+```
+
+没装 git 就去仓库页面选对分支后 **Code → Download ZIP**，解压后进入该目录。
+
+**3. 起服务。**
+
+```powershell
+docker compose up --build
+```
+
+首次要拉基础镜像、编译 Python 依赖、初始化数据库，**约 10–20 分钟**，取决于网速。
+中途大量输出是正常的。
+
+**4. 等这一行出现**，才算真的起来了：
+
+```
+odoo-1  | ... INFO ? odoo.service.server: HTTP service (werkzeug) running on
+```
+
+**5. 打开** <http://odoo.localhost>，用 `admin` / `admin123` 登录。
+
+**6. 停止**：终端里按 `Ctrl+C`。彻底清掉容器用 `docker compose down`；
+连数据库一起清掉重来用 `docker compose down -v`（会删光数据，慎用）。
+
+> PowerShell 里设环境变量的写法和 Linux 不同，`PROXY_PORT=8080 docker compose up`
+> **在 PowerShell 里不生效**。要改端口，在仓库根目录建一个 `.env` 文件写上
+> `PROXY_PORT=8080`，这个写法所有系统通用。
+
 起来之后三个地址都能用，账号 `admin` / `admin123`：
 
 | 地址 | 说明 |
