@@ -149,7 +149,68 @@ http 链接的问题。
 docker compose up --build
 ```
 
-### 从零开始（Windows）
+### 不用 Docker 跑（虚拟化开不了时走这条）
+
+Docker Desktop 报 **Virtualization support not detected** 时，说明 CPU 虚拟化在
+固件里关着，或者这台机器被 IT 策略锁了。先花 30 秒确认是哪种：
+
+任务管理器（`Ctrl+Shift+Esc`）→ **性能** → **CPU** → 看「虚拟化」这一项。
+
+- **已禁用** → 重启进 BIOS 打开 `Intel VT-x` / `AMD SVM Mode`，两分钟的事，之后
+  用上面的 Docker 方案，那条路更省心。
+- **已启用但 Docker 仍报错** → 管理员 PowerShell 跑 `wsl --install`，重启。
+- **公司电脑、改不了，或者是虚拟机** → 用下面这条原生方案，完全绕开虚拟化。
+
+Odoo 在 Windows 上原生跑其实比 Linux 更省事：`requirements.txt` 把
+`python-ldap`、`gevent`、`greenlet` 这几个需要编译的都排除了
+（`sys_platform != 'win32'`），剩下的基本都有现成的 wheel。少了 gevent 意味着
+只能跑线程模式，而这正好是我们要的模式。
+
+**1. 装 Python 3.12** — <https://www.python.org/downloads/>
+安装第一屏**务必勾上 `Add python.exe to PATH`**。
+
+**2. 装 PostgreSQL** — <https://www.postgresql.org/download/windows/>
+安装过程中会让你给 `postgres` 用户设密码，**记下来**，下一步要用。其余一路默认。
+
+**3. 拿代码**
+
+```powershell
+cd $HOME\Desktop
+git clone --depth 1 -b claude/odoo-open-source-system-da1r23 https://github.com/zhaijnelsonintermediate-hue/oddo.git
+cd oddo
+```
+
+**4. 一条命令装好并启动**
+
+```powershell
+python deploy\setup_local.py --demo
+```
+
+脚本会问你 PostgreSQL 的密码（第 2 步设的那个），然后自动建虚拟环境、装依赖、
+建库、装 CRM、启动服务。**首次约 10-15 分钟。**
+
+`--demo` 会带上演示数据。想要干净的库就去掉这个参数。
+
+**5. 打开** <http://localhost:8069>，账号 `admin`，密码 `admin123`。
+
+之后每次启动只要再跑一遍同一条命令，脚本会跳过已经做完的步骤，几秒就起来。
+
+| 参数 | 作用 |
+| --- | --- |
+| `--demo` | 装演示数据 |
+| `--admin-password 你的密码` | 改 admin 登录密码（默认 `admin123`） |
+| `--db-name 别的名字` | 换数据库名（默认 `odoo_crm`） |
+| `--http-port 8070` | 换端口 |
+| `--modules crm,sale_management` | 多装几个模块 |
+| `--setup-only` | 只安装不启动 |
+
+**依赖装到一半报编译错误**，装一下 Microsoft C++ Build Tools 再重跑：
+<https://visualstudio.microsoft.com/visual-cpp-build-tools/>
+
+**PDF 报表需要额外装 wkhtmltopdf**（CRM 本身用不到，可以先跳过）：
+<https://wkhtmltopdf.org/downloads.html>，要装 `0.12.6` 那个打过补丁的版本。
+
+### 从零开始（Windows，用 Docker）
 
 **1. 装 Docker Desktop。** 从 <https://www.docker.com/products/docker-desktop/>
 下载安装，按提示重启。装完启动它，等托盘的鲸鱼图标不再转动。验证：
