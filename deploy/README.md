@@ -166,8 +166,20 @@ Odoo 在 Windows 上原生跑其实比 Linux 更省事：`requirements.txt` 把
 （`sys_platform != 'win32'`），剩下的基本都有现成的 wheel。少了 gevent 意味着
 只能跑线程模式，而这正好是我们要的模式。
 
-**1. 装 Python 3.12** — <https://www.python.org/downloads/>
-安装第一屏**务必勾上 `Add python.exe to PATH`**。
+**1. 装 Python 3.12** — <https://www.python.org/downloads/release/python-3127/>
+页面拉到底，选 **Windows installer (64-bit)**。安装第一屏**务必勾上
+`Add python.exe to PATH`**。
+
+⚠️ **必须是 3.12，不要用 3.13 / 3.14。** 别从 python.org 首页的下载按钮进 ——
+那里给的是最新版。`requirements.txt` 里只有 `lxml` 和 `Pillow` 跟到了 3.14，
+`cryptography` / `psutil` / `libsass` / `reportlab` 都还停在 3.12 那一档，
+更高版本没有预编译包，pip 会现场编译并失败。脚本会在开头就把版本挡下来。
+
+已经装了别的版本也不用卸载，Windows 上可以指定版本运行：
+
+```powershell
+py -3.12 deploy\setup_local.py --demo
+```
 
 **2. 装 PostgreSQL** — <https://www.postgresql.org/download/windows/>
 安装过程中会让你给 `postgres` 用户设密码，**记下来**，下一步要用。其余一路默认。

@@ -49,15 +49,31 @@ def run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
 # ---------------------------------------------------------------------------
 # 1. Interpreter
 # ---------------------------------------------------------------------------
-def check_python() -> None:
+def check_python(allow_unsupported: bool) -> None:
     major, minor = sys.version_info[:2]
-    # setup.py declares python_requires>=3.10; above 3.12 the pinned wheels
-    # in requirements.txt start running out.
+    # setup.py declares python_requires>=3.10. The upper bound is not Odoo's
+    # but its dependencies': requirements.txt only carries 3.14 pins for lxml
+    # and Pillow, while cryptography, psutil, libsass and reportlab are still
+    # pinned at releases that ship no wheels past 3.12. pip then tries to
+    # build them from source, which on Windows means MSVC — and Rust, for
+    # cryptography. Failing here beats failing ten minutes into the install.
     if (major, minor) < (3, 10):
         die(f"需要 Python 3.10 以上，当前是 {major}.{minor}")
+
+    if (major, minor) > (3, 12) and not allow_unsupported:
+        die(
+            f"当前是 Python {major}.{minor}，Odoo 18 的依赖还没跟上这个版本。\n"
+            f"  cryptography / psutil / libsass / reportlab 都没有 {major}.{minor} "
+            "的预编译包，pip 会尝试现场编译并且大概率失败。\n\n"
+            "请装 Python 3.12：https://www.python.org/downloads/release/python-3127/\n"
+            "  安装时勾上 Add python.exe to PATH。\n"
+            "  装好后用它来跑本脚本，Windows 上可以直接指定版本：\n"
+            "      py -3.12 deploy\\setup_local.py --demo\n\n"
+            "确实想用当前版本硬试，加 --allow-unsupported-python。"
+        )
+
     if (major, minor) > (3, 12):
-        log(f"警告: Python {major}.{minor} 比 Odoo 18 官方支持的版本新，"
-            "部分依赖可能没有预编译包。建议用 3.12。")
+        log(f"警告: Python {major}.{minor} 未经支持，依赖安装可能失败（--allow-unsupported-python）")
     log(f"Python {major}.{minor} on {platform.system()}")
 
 
@@ -258,6 +274,8 @@ def main() -> None:
     p.add_argument("--venv", default=str(REPO / ".venv"))
     p.add_argument("--skip-deps", action="store_true")
     p.add_argument("--setup-only", action="store_true", help="装完不启动")
+    p.add_argument("--allow-unsupported-python", action="store_true",
+                   help="跳过 Python 版本检查（不建议）")
     args = p.parse_args()
 
     if args.db_password is None:
@@ -272,7 +290,7 @@ def main() -> None:
         "master_password": args.master_password, "language": args.language,
     }
 
-    check_python()
+    check_python(args.allow_unsupported_python)
     if not (REPO / "odoo-bin").exists():
         die(f"在 {REPO} 里找不到 odoo-bin，脚本位置不对？")
 
