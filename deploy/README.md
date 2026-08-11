@@ -61,8 +61,13 @@ ODOO_MASTER_PASSWORD = 另一个强密码
 首次部署会跑数据库初始化（装 base + crm 及其依赖），大约 3–8 分钟。`railway.json`
 里健康检查超时设成了 600 秒就是为了容纳这段时间。
 
-完成后在 **Settings → Networking → Generate Domain** 生成域名，打开即是登录页。
-用 `admin` + 你设的 `ODOO_ADMIN_PASSWORD` 登录。
+完成后在 **Settings → Networking → Generate Domain** 生成一个 `*.up.railway.app`
+域名，打开即是登录页，用 `admin` + 你设的 `ODOO_ADMIN_PASSWORD` 登录。
+
+要绑自己的域名，同一页 **Custom Domain** 里填域名，Railway 会给一条 CNAME 记录，
+到你的 DNS 服务商那边加上即可，证书 Railway 自动签发。`proxy_mode = True` 已经配好，
+Odoo 会正确识别 Railway 转发过来的 `X-Forwarded-Proto`，不会出现 https 页面里混进
+http 链接的问题。
 
 ## 环境变量
 
@@ -102,8 +107,26 @@ ODOO_MASTER_PASSWORD = 另一个强密码
 
 ```bash
 docker compose up --build
-# http://localhost:8069 ，admin / admin123
 ```
+
+起来之后三个地址都能用，账号 `admin` / `admin123`：
+
+| 地址 | 说明 |
+| --- | --- |
+| <http://odoo.localhost> | **推荐**。`*.localhost` 在 Chrome / Firefox / Safari 里自动解析到 127.0.0.1（RFC 6761），不用改 hosts |
+| <http://localhost> | 同一个反向代理，走 80 端口 |
+| <http://localhost:8069> | 直连 Odoo，绕过代理。调试代理问题时用 |
+
+想用自定义域名（比如 `crm.local`），在 hosts 文件里加一行即可，代理是按端口匹配的，不挑 Host：
+
+```
+127.0.0.1 crm.local
+```
+
+macOS / Linux 改 `/etc/hosts`，Windows 改 `C:\Windows\System32\drivers\etc\hosts`。
+
+**80 端口被占用的话**，把 `docker-compose.yml` 里 proxy 服务的 `"80:80"` 改成 `"8080:80"`，
+然后访问 <http://odoo.localhost:8080>。
 
 源码目录是 bind mount 的，改了代码重启容器即可，不用重新构建镜像。
 

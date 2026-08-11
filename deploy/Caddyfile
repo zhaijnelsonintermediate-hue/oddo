@@ -1,0 +1,23 @@
+# Reverse proxy for local development, so Odoo is reachable on a hostname
+# instead of localhost:8069.
+#
+# Matching on :80 rather than on a specific hostname is deliberate — it serves
+# any Host header, so odoo.localhost, crm.local and a plain localhost all work
+# without editing this file.
+
+{
+	admin off
+	# Local development only. Without this Caddy would try to provision real
+	# certificates for whatever hostname it is asked for.
+	auto_https off
+}
+
+:80 {
+	# reverse_proxy sets X-Forwarded-For / -Proto / -Host, which is what
+	# proxy_mode = True in odoo.conf reads to build correct absolute URLs.
+	#
+	# Websocket upgrades pass through untouched, and Caddy applies no response
+	# timeout by default — both matter because CRM chatter and activity
+	# notifications ride on a long-lived /websocket connection.
+	reverse_proxy odoo:8069
+}

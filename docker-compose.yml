@@ -48,6 +48,27 @@ services:
       - ./addons:/opt/odoo/addons
       - ./odoo:/opt/odoo/odoo
 
+  # Serves Odoo on a hostname instead of localhost:8069.
+  #
+  # Any *.localhost name resolves to 127.0.0.1 in Chrome, Firefox and Safari
+  # without touching /etc/hosts (RFC 6761), so http://odoo.localhost works as
+  # soon as this is up. For a custom name like crm.local, add
+  #   127.0.0.1 crm.local
+  # to /etc/hosts (C:\Windows\System32\drivers\etc\hosts on Windows).
+  #
+  # If port 80 is already taken on your machine, change the mapping to
+  # "8080:80" and browse http://odoo.localhost:8080 instead.
+  proxy:
+    image: caddy:2-alpine
+    depends_on:
+      - odoo
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+
 volumes:
   db-data:
   odoo-data:
+  caddy-data:
