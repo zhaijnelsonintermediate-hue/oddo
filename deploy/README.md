@@ -17,16 +17,38 @@ Railway 提供容器 + 持久卷 + 托管 Postgres，这三样正好是上面缺
 
 ## 部署步骤
 
-### 1. 建项目并挂 Postgres
+> **先说计费。** Railway 没有长期免费额度，新账号有一笔试用额度，用完需要绑卡上
+> Hobby 计划（$5/月起，按实际用量计费）。Odoo + Postgres + 卷轻量使用大致每月
+> 10–20 美元。走这条路之前先知道这件事。
 
-在 [railway.app](https://railway.app) 新建 Project → **Deploy from GitHub repo** → 选
-`zhaijnelsonintermediate-hue/oddo`，分支 `claude/odoo-open-source-system-da1r23`。
+### 1. 建项目
 
-Railway 会自动发现根目录的 `Dockerfile` 和 `railway.json`，不需要额外配置构建。
+在 [railway.app](https://railway.app) 用 GitHub 账号登录 → **New Project** →
+**Deploy from GitHub repo**。
 
-然后在同一个 Project 里 **New → Database → Add PostgreSQL**。
+首次会让你授权 Railway 访问 GitHub 仓库。如果列表里找不到 `oddo`，点
+**Configure GitHub App**，在 GitHub 的授权页面把这个仓库勾上再回来。
 
-### 2. 把数据库连给 Odoo 服务
+选中 `zhaijnelsonintermediate-hue/oddo` 之后 Railway 会立刻开始构建。
+
+### 2. 换成正确的分支
+
+**默认分支上没有部署配置，第一次构建一定会失败，这是正常的。**
+
+进 Odoo 服务 → **Settings → Source → Branch**，改成：
+
+```
+claude/odoo-open-source-system-da1r23
+```
+
+改完 Railway 会自动重新构建。它会发现根目录的 `Dockerfile` 和 `railway.json`，
+构建方式不用另外配。
+
+### 3. 加 Postgres
+
+同一个 Project 里 **New → Database → Add PostgreSQL**。
+
+### 4. 把数据库连给 Odoo 服务
 
 进 Odoo 服务的 **Variables**，添加一个引用变量：
 
@@ -34,9 +56,13 @@ Railway 会自动发现根目录的 `Dockerfile` 和 `railway.json`，不需要�
 DATABASE_URL = ${{Postgres.DATABASE_URL}}
 ```
 
+注意值要原样填 `${{Postgres.DATABASE_URL}}` —— 这是 Railway 的引用语法，
+它会在部署时替换成真实连接串。不要去 Postgres 服务里复制那串明文地址过来，
+那样密码轮换后就失效了。如果你的数据库服务不叫 `Postgres`，把前半段换成实际名字。
+
 `PORT` 由 Railway 自动注入，不要手动设。
 
-### 3. 挂持久卷
+### 5. 挂持久卷
 
 Odoo 服务 → **Settings → Volumes → Add Volume**，挂载路径填：
 
@@ -46,17 +72,31 @@ Odoo 服务 → **Settings → Volumes → Add Volume**，挂载路径填：
 
 **这一步不能省。** 附件、邮件附件、会话都存在这里，不挂卷的话每次重新部署全部丢失。
 
-### 4. 设置管理员密码
+### 6. 设置密码和语言
+
+继续在 **Variables** 里加：
 
 ```
 ODOO_ADMIN_PASSWORD  = 你的强密码
 ODOO_MASTER_PASSWORD = 另一个强密码
+ODOO_LOAD_LANGUAGE   = zh_CN
 ```
 
-`ODOO_ADMIN_PASSWORD` 是 `admin` 用户的登录密码。**不设的话首次初始化后 admin 密码是默认的 `admin`，部署即裸奔。**
+`ODOO_ADMIN_PASSWORD` 是 `admin` 用户的登录密码。**不设的话首次初始化后 admin
+密码是默认的 `admin`，域名一生成就是裸奔状态。**
 `ODOO_MASTER_PASSWORD` 是数据库管理器的主密码。
+`ODOO_LOAD_LANGUAGE=zh_CN` 让初始化时把中文语言包一起装上。
 
-### 5. 部署
+只是想先试用、看看功能长什么样，再加一个：
+
+```
+ODOO_WITH_DEMO = 1
+```
+
+会带一批演示线索和客户，空管道没什么可看的。**但这批数据之后清不干净** ——
+真要转生产得删库重来，所以确定要正式用的话就别加这条。
+
+### 7. 部署
 
 首次部署会跑数据库初始化（装 base + crm 及其依赖），大约 3–8 分钟。`railway.json`
 里健康检查超时设成了 600 秒就是为了容纳这段时间。
