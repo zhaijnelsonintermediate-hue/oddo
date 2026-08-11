@@ -56,14 +56,18 @@ services:
   #   127.0.0.1 crm.local
   # to /etc/hosts (C:\Windows\System32\drivers\etc\hosts on Windows).
   #
-  # If port 80 is already taken on your machine, change the mapping to
-  # "8080:80" and browse http://odoo.localhost:8080 instead.
+  # Port 80 is often already taken on Windows by IIS, the World Wide Web
+  # Publishing Service, or an HTTP.sys reservation — Caddy then fails to bind
+  # and the browser reports ERR_CONNECTION_REFUSED. Override without editing
+  # this file:
+  #   PROXY_PORT=8080 docker compose up     (or put PROXY_PORT=8080 in .env)
+  # then browse http://odoo.localhost:8080
   proxy:
     image: caddy:2-alpine
     depends_on:
       - odoo
     ports:
-      - "80:80"
+      - "${PROXY_PORT:-80}:80"
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

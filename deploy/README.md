@@ -125,8 +125,38 @@ docker compose up --build
 
 macOS / Linux 改 `/etc/hosts`，Windows 改 `C:\Windows\System32\drivers\etc\hosts`。
 
-**80 端口被占用的话**，把 `docker-compose.yml` 里 proxy 服务的 `"80:80"` 改成 `"8080:80"`，
-然后访问 <http://odoo.localhost:8080>。
+### 80 端口被占用
+
+Windows 上 80 端口经常被 IIS、`World Wide Web Publishing Service` 或 HTTP.sys
+预留占着。这时 Caddy 起不来，浏览器报 `ERR_CONNECTION_REFUSED`（注意这个错误码
+说明域名解析是好的，只是没人监听）。先查是谁占了：
+
+```powershell
+netstat -ano | findstr :80          # Windows
+sudo lsof -i :80                    # macOS / Linux
+```
+
+换个端口即可，不用改文件：
+
+```bash
+PROXY_PORT=8080 docker compose up
+```
+
+或在仓库根目录建个 `.env` 写上 `PROXY_PORT=8080`，然后访问
+<http://odoo.localhost:8080>。
+
+### 排查顺序
+
+代理层出问题时按这个顺序看：
+
+```bash
+docker compose ps            # 三个服务是否都是 running
+docker compose logs proxy    # Caddy 有没有起来、绑没绑上端口
+docker compose logs odoo     # Odoo 是否已经 "Modules loaded"
+curl http://localhost:8069/web/health   # 绕过代理直连，返回 {"status": "pass"} 说明 Odoo 本身没问题
+```
+
+最后一条能直接区分是代理的问题还是 Odoo 的问题。
 
 源码目录是 bind mount 的，改了代码重启容器即可，不用重新构建镜像。
 
